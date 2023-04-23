@@ -20,7 +20,7 @@ done
 
 readarray -t _git_branches < <(git branch --list "${_git_subtree_branch_prefix}*")
 
-for _i in "${_git_branches}" ; do
+for _i in "${_git_branches[@]}" ; do
 
   _git_subtree_branch="${_i}"
   _git_remote_repo_name="${_git_subtree_branch#${_git_subtree_branch_prefix}}"
