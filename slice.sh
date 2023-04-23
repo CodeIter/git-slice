@@ -18,12 +18,16 @@ for _i in "${@}" ; do
 
 done
 
-readarray -t _git_branches < <(git branch --list "${_git_subtree_branch_prefix}*")
+if [[ -n "${ENABLE_SUBTREE_PUSH}" ]] ; then
 
-for _i in "${_git_branches[@]}" ; do
+  readarray -t _git_branches < <(git branch --list "${_git_subtree_branch_prefix}*")
 
-  _git_subtree_branch="${_i}"
-  _git_remote_repo_name="${_git_subtree_branch#${_git_subtree_branch_prefix}}"
-  git push "https://x-access-token:${ACCESS_TOKEN}@github.com/${GITHUB_OWNER}/${_git_remote_repo_name}.git" "${_git_subtree_branch}:${_git_branch}"
+  for _i in "${_git_branches[@]}" ; do
 
-done
+    _git_subtree_branch="${_i}"
+    _git_remote_repo_name="${_git_subtree_branch#${_git_subtree_branch_prefix}}"
+    git push "https://x-access-token:${ACCESS_TOKEN}@github.com/${GITHUB_OWNER}/${_git_remote_repo_name}.git" "${_git_subtree_branch}:${_git_branch}"
+
+  done
+
+fi
