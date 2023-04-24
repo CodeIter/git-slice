@@ -1,6 +1,9 @@
 MIT License
 
-Copyright © 2022 Buckaroo Banzai & contributors
+Copyright (c) 2023 Mohammed Amin Boubaker and contributors
+
+Copyright (c) 2023      Mohammed Amin Boubaker (https://github.com/CodeIter)
+Copyright (c) 2021,2022 Buckaroo Banzai (https://github.com/BuckarooBanzay)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
