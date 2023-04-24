@@ -37,9 +37,14 @@ The `git-slice` script provides a convenient way to push changes from specific f
 - If there are conflicts when pushing changes to a remote repository, the script will create a pull request on GitHub.
 - The script will exit with an error if any command fails (`set -euo pipefail`).
 
-## Author
+## Authors
 
-This script was written by Mohammed Amin Boubaker.
+- This fork was created and maintained by [Mohammed Amin Boubaker : @CodeIter](https://github.com/CodeIter).
+- The original script was written by [Buckaroo Banzai : @BuckarooBanzay](https://github.com/BuckarooBanzay).
+
+## Credit
+
+The original idea come from [minetest-game/repo_slicer](https://github.com/minetest-game/repo_slicer) by [Buckaroo Banzai : @BuckarooBanzay](https://github.com/BuckarooBanzay).
 
 ## License
 
