@@ -1,20 +1,66 @@
 #!/usr/bin/env bash
 
-set -euxo pipefail
+# MIT License
+# 
+# Copyright (c) 2023 Mohammed Amin Boubaker (https://github.com/CodeIter)
+# 
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+#
+# @author  : Mohammed Amin Boubaker (https://github.com/CodeIter)
+# @license : MIT
+#
+
+# This script provides a convenient way to push changes from specific files or directories in a Git repository
+# to corresponding remote repositories using Git subtrees.
+
+set -euo pipefail
+
+if [[ -n "${ENABLE_SUBTREE_PUSH}" ]] ; then
+  if [[ -z "${ACCESS_TOKEN}" ]] ; then
+    >&2 echo "ERROR: \${ACCESS_TOKEN} environment not provided."
+    exit 1
+  fi
+  if ! command -v gh &> /dev/null; then
+    >&2 echo "ERROR: GitHub CLI is not installed. Required to create remote subtree repo."
+    exit 1
+  fi
+fi
 
 _git_subtree_branch_prefix="___"
-_git_branch="$(git rev-parse --abbrev-ref HEAD)"
-GITHUB_OWNER="${GITHUB_REPOSITORY%%/*}"
 
 for _i in "${@}" ; do
 
-  [ -e "${_i}" ] || continue
+  if ! [[ -e "${_i}" ]] ; then
+    >&2 echo "WARNING: No such file or directory: ${_i}"
+    continue
+  fi
 
   _dir="${_i}"
   _basename="$(basename "${_i}")"
 
-  git subtree split -P "${_dir}" -b "${_git_subtree_branch_prefix}${_basename}" \
-  || exit 1
+  if ! git show-ref --quiet --verify "refs/heads/${_git_subtree_branch_prefix}${_basename}" ; then
+    if ! git subtree split -P "${_dir}" -b "${_git_subtree_branch_prefix}${_basename}" ; then
+      >&2 echo "ERROR: 'git subtree split' exit with error ${?}"
+      exit 1
+    fi
+  fi
 
 done
 
@@ -26,7 +72,55 @@ if [[ -n "${ENABLE_SUBTREE_PUSH}" ]] ; then
 
     _git_subtree_branch="${_i}"
     _git_remote_repo_name="${_git_subtree_branch#${_git_subtree_branch_prefix}}"
-    git push "https://x-access-token:${ACCESS_TOKEN}@github.com/${GITHUB_OWNER}/${_git_remote_repo_name}.git" "${_git_subtree_branch}:${_git_branch}"
+    _git_branch="$(git rev-parse --abbrev-ref HEAD)"
+    _github_owner="${GITHUB_REPOSITORY%%/*}"
+    _git_subtree_remote="subtree_${_github_owner}_${_git_remote_repo_name}"
+    _git_new_repo_url="https://github.com/${_github_owner}/${_git_remote_repo_name}.git"
+    _git_new_repo_id="${_github_owner}/${_git_remote_repo_name}"
+
+    # Check if the remote repo exists
+    if curl -fsL "${_git_new_repo_url}" ; then
+    
+      >&2 echo "Remote subtree repo does not exist yet."
+
+      # If it doesn't exist, create it
+      gh auth login --with-token <<< "${ACCESS_TOKEN}"
+      gh repo create "${_git_new_repo_id}" --public --confirm --template="" --remote
+
+    fi
+
+    # Add the remote if it doesn't exist
+    if ! git ls-remote "${_git_subtree_remote}" &>/dev/null; then
+      git remote add "${_git_subtree_remote}" "${_git_new_repo_url}"
+    fi
+
+    # Get default subtree default branch
+    _git_remote_default_branch="$(git remote show "${remote_name}" | awk '/HEAD/ {print $NF}')"
+
+    # Set up the local branch to track the remote branch
+    git branch --set-upstream-to="${_git_subtree_remote}/${_git_remote_default_branch}" "${_git_subtree_branch}"
+
+    # Fetch subtree remote
+    git fetch "${_git_subtree_remote}" "${_git_remote_default_branch}"
+
+    # Check for conflicts
+    if git merge-base --is-ancestor "${_git_subtree_remote}/${_git_remote_default_branch}" "${_git_subtree_branch}" ; then
+      # If there are no conflicts, push the changes
+      # Set up a file descriptor to store the output of git-askpass.sh
+      exec 3<<<"${ACCESS_TOKEN}"
+      # Use the file descriptor to pass the access token to git
+      # XXX git push <remote> <local_branch>:<remote_branch>
+      git push "${_git_subtree_branch}" <&3
+      # Close the file descriptor
+      exec 3<&-
+    else
+      # If there are conflicts, create a pull request
+      gh pr create  --title "Merge ${_git_subtree_branch} into ${_git_remote_default_branch}" \
+                    --body "Automatic merge of ${_git_subtree_branch} into ${_git_remote_default_branch}" \
+                    --base "${_git_remote_default_branch}" \
+                    --head "${_git_subtree_branch}" \
+                    --repo "${_git_new_repo_id}"
+    fi
 
   done
 
