@@ -1,6 +1,6 @@
 # Git repository slicer
 
-The `git-slice` script provides a convenient way to push changes from specific files or directories in a Git repository to corresponding remote repositories using Git subtrees.
+The `git-slice` script provides a convenient way to push changes from specific files or directories in a Git repository to corresponding remote repositories using Git subtrees in a manageable chunks.
 
 ## Requirements
 
