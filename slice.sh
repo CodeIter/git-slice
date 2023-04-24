@@ -32,16 +32,25 @@
 
 set -euo pipefail
 
-if [[ -n "${ENABLE_SUBTREE_PUSH}" ]] ; then
+for _i in bash git ; do
+  if ! command -v "${_i}" &> /dev/null ; then
+    >&2 echo "ERROR: ${_i} is not installed."
+    _will_exit=1
+  fi
+done
+if [[ -n "${ENABLE_SUBTREE_PUSH:+x}" ]] ; then
   if [[ -z "${ACCESS_TOKEN}" ]] ; then
     >&2 echo "ERROR: \${ACCESS_TOKEN} environment not provided."
     exit 1
   fi
-  if ! command -v gh &> /dev/null; then
-    >&2 echo "ERROR: GitHub CLI is not installed. Required to create remote subtree repo."
-    exit 1
-  fi
+  for _i in gh curl awk ; do
+    if ! command -v "${_i}" &> /dev/null ; then
+      >&2 echo "ERROR: ${_i} is not installed."
+      _will_exit=1
+    fi
+  done
 fi
+[ -n "${_will_exit:+x}" ] && exit 1
 
 _git_subtree_branch_prefix="___"
 
@@ -64,7 +73,8 @@ for _i in "${@}" ; do
 
 done
 
-if [[ -n "${ENABLE_SUBTREE_PUSH}" ]] ; then
+
+if [[ -n "${ENABLE_SUBTREE_PUSH:+x}" ]] ; then
 
   readarray -t _git_branches < <(git branch --list "${_git_subtree_branch_prefix}*")
 
