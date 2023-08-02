@@ -39,7 +39,7 @@ The `git-slice` script provides a convenient way to push changes from specific f
 
 ## Authors
 
-- This fork was created and maintained by [Mohammed Amin Boubaker : @CodeIter](https://github.com/CodeIter).
+- This fork was created and maintained by [Muhammad Amin Boubaker : @CodeIter](https://github.com/CodeIter).
 
 ## Credit
 
