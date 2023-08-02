@@ -80,7 +80,8 @@ for _i in "${@}" ; do
   else
     if ! git subtree split -P "${_dir}" -b "${_git_subtree_branch_prefix}${_basename}" ; then
       >&2 echo "ERROR: 'git subtree split' exit with error ${?}"
-      exit 2
+      >&2 echo "ERROR: Extracting Fail for git branch '${_git_subtree_branch_prefix}${_basename}', skipping '${_i}'."
+      continue
     fi
   fi
 
