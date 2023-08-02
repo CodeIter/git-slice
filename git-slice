@@ -35,25 +35,32 @@
 
 set -euo pipefail
 
+unset _will_exit
 for _i in bash git ; do
   if ! command -v "${_i}" &> /dev/null ; then
-    >&2 echo "ERROR: ${_i} is not installed."
+    >&2 echo "ERROR: No Such Command: ${_i}"
     _will_exit=1
   fi
 done
-if [[ -n "${ENABLE_SUBTREE_PUSH:+x}" ]] ; then
-  if [[ -z "${ACCESS_TOKEN}" ]] ; then
-    >&2 echo "ERROR: \${ACCESS_TOKEN} environment not provided."
-    exit 1
+if [[ -n "${ENABLE_SUBTREE_PUSH:-}" ]] ; then
+  if [[ -z "${ACCESS_TOKEN:-}" ]] ; then
+    >&2 echo "ERROR: \${ENABLE_SUBTREE_PUSH} require \${ACCESS_TOKEN} environment variable."
+    >&2 echo "ERROR: No Such environment variable: \${ACCESS_TOKEN}"
+    _will_exit=1
+  fi
+  if [[ -z "${GITHUB_REPOSITORY:-}" ]] ; then
+    >&2 echo "ERROR: \${ENABLE_SUBTREE_PUSH} require \${GITHUB_REPOSITORY} environment variable."
+    >&2 echo "ERROR: No Such environment variable: \${GITHUB_REPOSITORY}"
+    _will_exit=1
   fi
   for _i in gh curl awk ; do
     if ! command -v "${_i}" &> /dev/null ; then
-      >&2 echo "ERROR: ${_i} is not installed."
+      >&2 echo "ERROR: No Such Command: ${_i}"
       _will_exit=1
     fi
   done
 fi
-[ -n "${_will_exit:+x}" ] && exit 1
+[ -n "${_will_exit:-}" ] && exit 1
 
 _git_subtree_branch_prefix="___"
 
@@ -67,17 +74,20 @@ for _i in "${@}" ; do
   _dir="${_i}"
   _basename="$(basename "${_i}")"
 
-  if ! git show-ref --quiet --verify "refs/heads/${_git_subtree_branch_prefix}${_basename}" ; then
+  if git show-ref --quiet --verify "refs/heads/${_git_subtree_branch_prefix}${_basename}" ; then
+    >&2 echo "WARNING: git branch '${_git_subtree_branch_prefix}${_basename}' exist, skipping '${_i}'."
+    continue
+  else
     if ! git subtree split -P "${_dir}" -b "${_git_subtree_branch_prefix}${_basename}" ; then
       >&2 echo "ERROR: 'git subtree split' exit with error ${?}"
-      exit 1
+      exit 2
     fi
   fi
 
 done
 
 
-if [[ -n "${ENABLE_SUBTREE_PUSH:+x}" ]] ; then
+if [[ -n "${ENABLE_SUBTREE_PUSH:-}" ]] ; then
 
   readarray -t _git_branches < <(git branch --list "${_git_subtree_branch_prefix}*")
 
@@ -86,24 +96,25 @@ if [[ -n "${ENABLE_SUBTREE_PUSH:+x}" ]] ; then
     _git_subtree_branch="${_i}"
     _git_remote_repo_name="${_git_subtree_branch#${_git_subtree_branch_prefix}}"
     _git_branch="$(git rev-parse --abbrev-ref HEAD)"
+    GITHUB_REPOSITORY="${GITHUB_REPOSITORY:-}"
     _github_owner="${GITHUB_REPOSITORY%%/*}"
     _git_subtree_remote="subtree_${_github_owner}_${_git_remote_repo_name}"
     _git_new_repo_url="https://github.com/${_github_owner}/${_git_remote_repo_name}.git"
     _git_new_repo_id="${_github_owner}/${_git_remote_repo_name}"
 
-    # Check if the remote repo exists
-    if curl -fsL "${_git_new_repo_url}" ; then
+    # Check if the remote repo does not exists
+    if ! curl -fsSL "${_git_new_repo_url}" &> /dev/null ; then
 
-      >&2 echo "Remote subtree repo does not exist yet."
+      >&2 echo "INFO: Remote subtree repo does not exist yet."
 
-      # If it doesn't exist, create it
-      gh auth login --with-token <<< "${ACCESS_TOKEN}"
+      # If it does not exist, create it
+      gh auth login --with-token <<< "${ACCESS_TOKEN:-}"
       gh repo create "${_git_new_repo_id}" --public --confirm --template="" --remote
 
     fi
 
     # Add the remote if it doesn't exist
-    if ! git ls-remote "${_git_subtree_remote}" &>/dev/null; then
+    if ! git ls-remote "${_git_subtree_remote}" &>/dev/null ; then
       git remote add "${_git_subtree_remote}" "${_git_new_repo_url}"
     fi
 
