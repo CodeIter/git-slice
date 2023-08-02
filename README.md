@@ -23,12 +23,12 @@ The `git-slice` script provides a convenient way to push changes from specific f
 
 ## Options
 
-- `{paths}` : Specify one or more files or directories to exort them as **git branch** or **git repositories** at [github.com](github.com).
+- `{paths}` : Specify one or more files or directories to exort them as **git branch** or **git repositories** at [github.com](htts://github.com).
 
 ## Environment variables
 
 - `ACCESS_TOKEN`        : Access token with `repo` permissions **required** if `ENABLE_SUBTREE_PUSH` enabled.
-- `ENABLE_SUBTREE_PUSH` : A non-empty value to enable export `git subtree` as **git repository** at [github.com](github.com).
+- `ENABLE_SUBTREE_PUSH` : A non-empty value to enable export `git subtree` as **git repository** at [github.com](htts://github.com).
 
 ## Notes
 
