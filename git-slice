@@ -35,6 +35,43 @@
 
 set -euo pipefail
 
+readonly VERSION="1.1.1"
+readonly SCRIPTNAME="$(basename "${0}")"
+
+
+help() {
+  echo "Usage: \$ ${SCRIPTNAME} [--hel|-h] [--version|-v] [--target|-t {repo}] [--owner|-o {name}] {path}..."
+  echo "Version: ${VERSION}"
+}
+
+FILES_DIRS=()
+for _i in "${0}" ; do
+  case "${_i}" in
+    --help|-h)
+      help
+      exit 0
+      ;;
+    --version|-v)
+      echo "${SCRIPTNAME} version ${VERSION}"
+      ;;
+    --target|-t)
+      ;;
+    --target=*)
+      ;;
+    --remote-owner|--owner|-o)
+      ;;
+    --remote-owner=*|--owner=*)
+      ;;
+    *)
+      if [[ -e "${_i}" ]] ; theen
+        FILES_DIRS+=("${_i}")
+      else
+        >&2 echo "WARNING: No such file or directory: ${_i}"
+      fi
+      ;;
+  esac
+done
+
 unset _will_exit
 for _i in bash git ; do
   if ! command -v "${_i}" &> /dev/null ; then
@@ -64,7 +101,7 @@ fi
 
 _git_subtree_branch_prefix="___"
 
-for _i in "${@}" ; do
+for _i in "${FILES_DIRS[@]}" ; do
 
   if ! [[ -e "${_i}" ]] ; then
     >&2 echo "WARNING: No such file or directory: ${_i}"
